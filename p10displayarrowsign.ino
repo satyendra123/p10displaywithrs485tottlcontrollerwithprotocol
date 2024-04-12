@@ -1,0 +1,45 @@
+#include <SPI.h>
+#include <TimerOne.h>
+#include <DMD.h>
+#include <Arial_Black_16.h>
+
+#define DISPLAYS_ACROSS 1
+#define DISPLAYS_DOWN 1
+
+DMD dmd(DISPLAYS_ACROSS, DISPLAYS_DOWN);
+
+byte arrow1[] = {
+  B00000000, B00000000, B00000000, B00000000,
+  B00000000, B00000000, B00000000, B00000000,
+  B00000000, B00000001, B00000000, B00000000,
+  B00000000, B00000011, B00000000, B00000000,
+  B00000000, B00000111, B00000000, B00000000,
+  B00000000, B00001111, B00000000, B00000000,
+  B00000000, B00011111, B11111111, B11100000,
+  B00000000, B00111111, B11111111, B11100000,
+  B00000000, B01111111, B11111111, B11100000,
+  B00000000, B01111111, B11111111, B11100000,
+  B00000000, B00111111, B00000000, B00000000,
+  B00000000, B00011111, B00000000, B00000000,
+  B00000000, B00001111, B00000000, B00000000,
+  B00000000, B00000111, B00000000, B00000000,
+  B00000000, B00000011, B00000000, B00000000
+};
+
+void scanDisplay() {
+  dmd.scanDisplayBySPI();
+}
+
+void setup() {
+  Timer1.initialize(5000); // Refresh rate in microseconds
+  Timer1.attachInterrupt(scanDisplay);
+  dmd.clearScreen(true);
+}
+
+void loop() {
+  dmd.clearScreen(true);
+  dmd.selectFont(Arial_Black_16);
+  const char* arrow1Text = reinterpret_cast<const char*>(arrow1);
+  dmd.drawMarquee(arrow1Text, 32, DISPLAYS_ACROSS);
+  delay(2000); // Display the arrow for 2 seconds
+}
