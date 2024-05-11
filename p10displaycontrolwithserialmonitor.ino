@@ -69,7 +69,9 @@ void loop(void)
     scroll_demo();  delay(2000);
 }
 */
-//Example-2 display the data from serially. send anydata and it will display. this is working fine. when i send the data from the hercules then it display on the screen
+//Example-2 display the data from serially. send anydata and it will display. this is working fine. when i send the data from the serial monitor then it display on the screen
+
+
 #include <SPI.h>       
 #include <DMD.h>       // use SPI bus 
 #include <TimerOne.h>
