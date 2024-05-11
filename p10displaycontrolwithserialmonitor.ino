@@ -1,3 +1,4 @@
+//EXAMPLE-1 is code me humne rs485tottl module ka use nahi kiya hai. hum agar message ko serial monitor me likhe to hume display par ye message print hota hai
 /*
 #include <SPI.h>       
 #include <DMD.h>       // use spi bus 
