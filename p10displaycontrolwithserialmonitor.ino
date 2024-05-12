@@ -1,5 +1,6 @@
 /*
-//EXAMPLE-1 this code works only for when i send the data through serial monitor to arduino. if i will 
+//EXAMPLE-1 this code works only for when i send the data through serial monitor to arduino. suppose my arduino is connected with com13 and i will select the hercules terminal with com13 then it worked fine and display the data whatever i send from it. but in reality i want that i will send the data through the oyther com port rather than the arduino com port
+// by using the rs485tottl module. but it is not working. in the example-2 i have connected rs485tottl module to arduino pin 2 and 3
 #include <SPI.h>       
 #include <DMD.h>       // use SPI bus 
 #include <TimerOne.h>
@@ -39,7 +40,8 @@ void show_text(const char* text) {
   dmd.drawString(0, 0, text, strlen(text), GRAPHICS_NORMAL);
 }
 */
-
+//EXAMPLE-2 in this example 2 i have connected rs485tottl module with arduino pin 2 and 3. rs485tottl tx pin is connected with arduino 3 and rs485tottl rx pin is connected
+//with arduino pin 2. and my arduino is connected with com13 and my rs485tousb is connected with com10. now i will send the data from hercules with com10 port and the p10 display display the data
 #include <SoftwareSerial.h>
 #include <SPI.h>
 #include <DMD.h>
