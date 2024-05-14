@@ -102,7 +102,7 @@ void show_text(const char* text)
 
 
 /*
-//EXAMPLE-2 extract the protocol and print the data into the p10 display
+//EXAMPLE-2 extract the protocol and print the data into the p10 display ALSO ARROW SIGN WILL BE DISPLAYED
 #include <font/TimesNewRoman12.h> // Include a smaller font
 
 const int ledPin = 13;
