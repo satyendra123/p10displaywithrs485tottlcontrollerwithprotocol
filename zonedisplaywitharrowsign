@@ -1,12 +1,11 @@
 #include <SoftwareSerial.h>
 #include <SPI.h>
-#include <DMD.h>
+#include <DMD3.h>
 #include <TimerOne.h>
-#include "Arial_black_16.h"
+#include <font/TimesNewRoman12.h> 
 
-#define DISPLAYS_ACROSS 1   // Number of P1 panels in horizontal
-#define DISPLAYS_DOWN   1   // Number of P1 panels in vertical
-DMD dmd(DISPLAYS_ACROSS, DISPLAYS_DOWN);
+const int ledPin = 13;
+DMD3 display;
 
 const byte TX_PIN = 2;
 const byte RX_PIN = 3;
@@ -27,17 +26,63 @@ struct CommunicationData {
   byte end;
 };
 
-void ScanDMD() {
-  dmd.scanDisplayBySPI();
+byte const arrow1[] PROGMEM = {
+  32, 16,
+  B00000000, B00000000, B00000000, B00000000,
+  B00000000, B00000000, B00000000, B00000000,
+  B00000000, B00000001, B00000000, B00000000,
+  B00000000, B00000011, B00000000, B00000000,
+  B00000000, B00000111, B00000000, B00000000,
+  B00000000, B00001111, B00000000, B00000000,
+  B00000000, B00011111, B11111111, B11100000,
+  B00000000, B00111111, B11111111, B11100000,
+  B00000000, B01111111, B11111111, B11100000,
+  B00000000, B01111111, B11111111, B11100000,
+  B00000000, B00111111, B00000000, B00000000,
+  B00000000, B00011111, B00000000, B00000000,
+  B00000000, B00001111, B00000000, B00000000,
+  B00000000, B00000111, B00000000, B00000000,
+  B00000000, B00000011, B00000000, B00000000,
+  B00000000, B00000000, B00000000, B00000000,
+  B00000000, B00000000, B00000000, B00000000,
+  B00000000, B00000000, B00000000, B00000000,
+  B00000000, B00000000, B00000000, B00000000,
+  B00000000, B00000000, B00000000, B00000000,
+  B00000000, B00000000, B00000000, B00000000
+};
+
+byte const arrow2[] PROGMEM = {
+  32, 16,
+  // Define the bitmap data for the second arrow sign here
+};
+
+
+byte const arrow3[] PROGMEM = {
+  32, 16,
+  // Define the bitmap data for the third arrow sign here
+};
+
+const byte* frames[] = {
+    arrow1,
+   // arrow2,
+    //arrow3,
+};
+#define NUM_FRAMES  (sizeof(frames) / sizeof(frames[0]))
+unsigned int frame = 0;
+
+#define ADVANCE_MS  (1000 / NUM_FRAMES)
+
+void scan() {
+    display.refresh();
 }
 
 void setup() {
   Serial.begin(115200);
   Serial.println("Start...");
-
   Soft_Serial.begin(9600);
-  Timer1.initialize(3000);
-  Timer1.attachInterrupt(ScanDMD);
+  Timer1.initialize(2000);
+  Timer1.attachInterrupt(scan);
+  Timer1.pwm(9, 255);
 }
 
 void loop() {
@@ -60,7 +105,13 @@ void loop() {
       int vacancy = vacancyHigh * 10 + vacancyLow;
       Serial.print("Vacancy: ");
       Serial.println(vacancy);
-      show_text(String(vacancy).c_str(), strlen(String(vacancy).c_str()));
+    // Display arrow and text on the P10 display
+    show_text(vacancy, frames[frame]);
+    delay(1000);
+    display.refresh();
+
+    frame = (frame + 1) % NUM_FRAMES;
+  }
     }
     memset(buffer, 0, sizeof(buffer));
   }
@@ -68,8 +119,16 @@ void loop() {
   delay(2000);
   dmd.clearScreen(true);
 }
-void show_text(const char* text, int length) {
-  dmd.clearScreen(true);
-  dmd.selectFont(Arial_Black_16);
-  dmd.drawString(0, 0, text, length, GRAPHICS_NORMAL);
+void show_text(const char* text, const byte* arrow) {
+  display.clear();
+  display.setFont(TimesNewRoman12); // Use a smaller font
+  display.drawText(10, 0, text); // Adjust the position for text
+  display.refresh(); // Refresh the display after drawing text
+  delay(2000);
+  
+  display.clear(); // Clear the display buffer before drawing the arrow
+  display.drawBitmap(20, 5, arrow); // Draw arrow at the left side
+  display.refresh(); // Refresh the display after drawing arrow
+  delay(2000);
 }
+
