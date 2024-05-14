@@ -27,41 +27,33 @@ struct CommunicationData {
 };
 
 byte const arrow1[] PROGMEM = {
-  32, 16,
-  B00000000, B00000000, B00000000, B00000000,
-  B00000000, B00000000, B00000000, B00000000,
-  B00000000, B00000001, B00000000, B00000000,
-  B00000000, B00000011, B00000000, B00000000,
-  B00000000, B00000111, B00000000, B00000000,
-  B00000000, B00001111, B00000000, B00000000,
-  B00000000, B00011111, B11111111, B11100000,
-  B00000000, B00111111, B11111111, B11100000,
-  B00000000, B01111111, B11111111, B11100000,
-  B00000000, B01111111, B11111111, B11100000,
-  B00000000, B00111111, B00000000, B00000000,
-  B00000000, B00011111, B00000000, B00000000,
-  B00000000, B00001111, B00000000, B00000000,
-  B00000000, B00000111, B00000000, B00000000,
-  B00000000, B00000011, B00000000, B00000000,
-  B00000000, B00000000, B00000000, B00000000,
-  B00000000, B00000000, B00000000, B00000000,
-  B00000000, B00000000, B00000000, B00000000,
-  B00000000, B00000000, B00000000, B00000000,
-  B00000000, B00000000, B00000000, B00000000,
-  B00000000, B00000000, B00000000, B00000000
+  16, 13,
+  B00000001, B00000000,
+  B00000011, B00000000,
+  B00000111, B00000000,
+  B00001111, B00000000,
+  B00011111, B11111111,
+  B00111111, B11111111,
+  B01111111, B11111111,
+  B01111111, B11111111,
+  B00111111, B00000000,
+  B00011111, B00000000,
+  B00001111, B00000000,
+  B00000111, B00000000,
+  B00000011, B00000000,
 };
-
+/*
 byte const arrow2[] PROGMEM = {
   32, 16,
   // Define the bitmap data for the second arrow sign here
 };
-
-
+*/
+/*
 byte const arrow3[] PROGMEM = {
   32, 16,
   // Define the bitmap data for the third arrow sign here
 };
-
+*/
 const byte* frames[] = {
     arrow1,
    // arrow2,
@@ -105,24 +97,26 @@ void loop() {
       int vacancy = vacancyHigh * 10 + vacancyLow;
       Serial.print("Vacancy: ");
       Serial.println(vacancy);
-    // Display arrow and text on the P10 display
-    show_text(vacancy, frames[frame]);
-    delay(1000);
-    display.refresh();
+      // Display arrow and text on the P10 display
+      show_text(vacancy, frames[frame]);
+      delay(1000);
+      display.refresh();
 
-    frame = (frame + 1) % NUM_FRAMES;
-  }
+      frame = (frame + 1) % NUM_FRAMES;
     }
     memset(buffer, 0, sizeof(buffer));
   }
   
   delay(2000);
-  dmd.clearScreen(true);
+  display.clearScreen(true);
 }
-void show_text(const char* text, const byte* arrow) {
+
+void show_text(int vacancy, const byte* arrow) {
   display.clear();
+  char vacancyText[4];
+  sprintf(vacancyText, "%d", vacancy);
   display.setFont(TimesNewRoman12); // Use a smaller font
-  display.drawText(10, 0, text); // Adjust the position for text
+  display.drawText(10, 0, vacancyText); // Adjust the position for text
   display.refresh(); // Refresh the display after drawing text
   delay(2000);
   
@@ -131,4 +125,3 @@ void show_text(const char* text, const byte* arrow) {
   display.refresh(); // Refresh the display after drawing arrow
   delay(2000);
 }
-
