@@ -1,4 +1,3 @@
-// this is the working code. in this arrow sign is also displayed and vacancy data is also displayed send by the docklight. now i will test it through the combi sensors
 #include <SoftwareSerial.h>
 #include <SPI.h>
 #include <DMD3.h>
