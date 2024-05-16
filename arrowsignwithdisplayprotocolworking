@@ -599,7 +599,7 @@ void scan() {
 void ArrowDisplay::init() {
     Timer1.initialize(2000);
     Timer1.attachInterrupt(scan);
-    Timer1.pwm(9, 10);
+    Timer1.pwm(9, 255);
 }
 
 void ArrowDisplay::showRightArrows() {
