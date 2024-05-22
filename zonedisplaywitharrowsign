@@ -845,11 +845,6 @@ void setup() {
     Timer1.pwm(9, 255);
 }
 
-
-
-// Placeholder for your Soft_Serial object
-// Define Soft_Serial as needed for your setup
-
 void loop() {
     unsigned long currentMillis = millis();
 
@@ -893,6 +888,7 @@ void process_serial_data() {
                 currentVacancy = vacancy;
                 show_text(vacancy);
             }
+          memset(buffer, 0, BUFFER_SIZE); // Clear the buffer before use
         }
     }
 }
