@@ -1,4 +1,4 @@
-//EXAMPLE-1 this is using the DMD32.h library using esp32. in the esp32 p10 display there are basically two libraries which are working one is DMD32.h library and the another one is DMDESP library.
+//EXAMPLE-1 this is using the DMD32.h library using esp32. DMD.h library are using with the esp32 and the DMDESP.h library are using with the esp8266 nodemcu controller. these both example-1 and example-2 are taken by the Uteh Str youtube channel
 #include <WiFi.h>
 #include <NTPClient.h>
 #include <WiFiUdp.h>
@@ -143,7 +143,7 @@ dmd.drawChar(52, 2, '0' + (milliseconds % 10), GRAPHICS_NORMAL);
 delay(1000);
 }
 
-//EXAMPLE-2 using DMDESP.h library
+//EXAMPLE-2 using DMDESP.h library this library are basically using with the ESP8266 CONTROLLER
 /*
  * Contoh penggunaan library DMDESP
  * 
