@@ -1,0 +1,143 @@
+#include <WiFi.h>
+#include <NTPClient.h>
+#include <WiFiUdp.h>
+#include <DMD32.h>
+//#include "fonts/Arial_black_16.h"
+#include "fonts/Arial_bold_14.h"
+// Replace with your network credentials
+
+const char* ssid = "Kucing Santo";
+const char* password = "kucingsanto2022";
+
+// Define NTP Client to get time
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP, "id.pool.ntp.org", 25200); // set NTP server to "id.pool.ntp.org" (Indonesia timezone GMT+7)
+
+DMD dmd(1, 1);
+
+// Timer setup
+hw_timer_t *timer = NULL;
+
+bool isStopwatchMode = false;
+unsigned long stopwatchStartTime = 0;
+
+void IRAM_ATTR triggerScan()
+{
+  dmd.scanDisplayBySPI();
+}
+
+void ShowClockNumbers(unsigned int uiTime, byte bColonOn)
+{
+  dmd.clearScreen(true);
+  dmd.drawChar(0, 2, '0' + ((uiTime % 10000) / 1000), GRAPHICS_NORMAL);
+  dmd.drawChar(7, 2, '0' + ((uiTime % 1000) / 100), GRAPHICS_NORMAL);
+  dmd.drawChar(19,2, '0' + ((uiTime % 100) / 10), GRAPHICS_NORMAL);
+  dmd.drawChar(25,2, '0' + (uiTime % 10), GRAPHICS_NORMAL);
+  if (bColonOn)
+    dmd.drawChar(16, 1, ':', GRAPHICS_OR);
+  else
+    dmd.drawChar(16, 1, ':', GRAPHICS_NOR);
+}
+
+void ShowStopwatchNumbers(unsigned long stopwatchTime)
+{
+  unsigned int milliseconds = (stopwatchTime % 1000) / 100;
+  unsigned int seconds = (stopwatchTime / 1000) % 60;
+  unsigned int minutes = (stopwatchTime / 60000) % 60;
+  unsigned int hours = (stopwatchTime / 3600000) % 24;
+
+  dmd.clearScreen(true);
+  dmd.drawChar(0, 2, '0' + ((hours % 100) / 10), GRAPHICS_NORMAL);
+  dmd.drawChar(7, 2, '0' + (hours % 10), GRAPHICS_NORMAL);
+  dmd.drawChar(16, 1, ':', GRAPHICS_NORMAL);
+  dmd.drawChar(19, 2, '0' + ((minutes % 100) / 10), GRAPHICS_NORMAL);
+  dmd.drawChar(25, 2, '0' + (minutes % 10), GRAPHICS_NORMAL);
+  dmd.drawChar(36, 2, ':', GRAPHICS_NORMAL);
+  dmd.drawChar(38, 2, '0' + ((seconds % 100) / 10), GRAPHICS_NORMAL);
+  dmd.drawChar(45, 2, '0' + (seconds % 10), GRAPHICS_NORMAL);
+  dmd.drawChar(50, 2, '.', GRAPHICS_NORMAL);
+  dmd.drawChar(53, 2, '0' + milliseconds, GRAPHICS_NORMAL);
+}
+void setup()
+{
+  uint8_t cpuClock = ESP.getCpuFreqMHz();
+  
+  // Connect to Wi-Fi
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.println("Connecting to WiFi...");
+  }
+  Serial.println("Connected to WiFi");
+
+  // Set the time zone and configure the NTP client
+  configTime(7 * 3600, 0, "id.pool.ntp.org", "time.nist.gov");
+
+  // Use 1st timer of 4 
+  timer = timerBegin(0, cpuClock, true);
+  
+  // Attach triggerScan function to our timer 
+  timerAttachInterrupt(timer, &triggerScan, true);
+  
+  // Set alarm to call triggerScan function  
+  timerAlarmWrite(timer, 300, true);
+
+  // Start an alarm 
+  timerAlarmEnable(timer);
+
+  dmd.clearScreen(true);
+  dmd.selectFont(Arial_bold_14);
+}
+void loop()
+{
+static boolean stopWatchMode = false;
+static unsigned long stopWatchStartTime = 0;
+static unsigned long stopWatchElapsedTime = 0;
+
+// check if the button on pin 4 is pressed to activate stopwatch mode
+if (digitalRead(4) == HIGH) {
+stopWatchMode = true;
+stopWatchStartTime = millis();
+stopWatchElapsedTime = 0;
+}
+
+// check if the button on pin 6 is pressed to exit stopwatch mode
+if (digitalRead(17) == HIGH) {
+stopWatchMode = false;
+}
+
+if (!stopWatchMode) {
+// update the NTP client and get the current time
+timeClient.update();
+unsigned long currentTime = timeClient.getEpochTime();
+// calculate the hours, minutes, and seconds
+unsigned int hours = (currentTime / 3600) % 24;
+unsigned int minutes = (currentTime / 60) % 60;
+unsigned int seconds = currentTime % 60;
+
+// draw the clock
+ShowClockNumbers(hours * 100 + minutes, seconds % 2 == 0);
+} else {
+// calculate the elapsed time in milliseconds
+stopWatchElapsedTime = millis() - stopWatchStartTime;
+// calculate the elapsed time in minutes, seconds, and milliseconds
+unsigned int minutes = stopWatchElapsedTime / 60000;
+unsigned int seconds = (stopWatchElapsedTime % 60000) / 1000;
+unsigned int milliseconds = stopWatchElapsedTime % 1000;
+
+// draw the stopwatch
+dmd.clearScreen(true);
+dmd.drawChar(0, 2, '0' + ((minutes % 100) / 10), GRAPHICS_NORMAL);
+dmd.drawChar(7, 2, '0' + (minutes % 10), GRAPHICS_NORMAL);
+dmd.drawChar(16, 1, ':', GRAPHICS_NORMAL);
+dmd.drawChar(19, 2, '0' + ((seconds % 100) / 10), GRAPHICS_NORMAL);
+dmd.drawChar(25, 2, '0' + (seconds % 10), GRAPHICS_NORMAL);
+dmd.drawChar(36, 2, '.', GRAPHICS_NORMAL);
+dmd.drawChar(38, 2, '0' + ((milliseconds % 1000) / 100), GRAPHICS_NORMAL);
+dmd.drawChar(45, 2, '0' + ((milliseconds % 100) / 10), GRAPHICS_NORMAL);
+dmd.drawChar(52, 2, '0' + (milliseconds % 10), GRAPHICS_NORMAL);
+}
+
+// wait for a second
+delay(1000);
+}
