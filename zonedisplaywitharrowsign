@@ -912,3 +912,302 @@ void show_arrow(const byte* arrow) {
     display.drawBitmap(x + 22, 2, arrow);
     display.refresh();
 }
+
+#example- IN THIS I WILL USE THE NAND SIR PROTOCOL and make it. but i have not tested it...
+#include <SoftwareSerial.h>
+#include <SPI.h>
+#include <DMD3.h>
+#include <TimerOne.h>
+#include <font/TimesNewRoman12.h>
+#include <EEPROM.h>
+
+// Define the number of displays
+#define DISPLAYS_ACROSS 4
+#define DISPLAYS_DOWN 1
+DMD3 display(DISPLAYS_ACROSS, DISPLAYS_DOWN);
+
+// EEPROM address to store system ID
+#define EEPROM_SYSTEM_ID_ADDR 0
+
+// Arrow patterns
+const byte upArrow[] PROGMEM = {
+  16, 13,
+  B00000001, B10000000,
+  B00000011, B11000000,
+  B00000111, B11100000,
+  B00001111, B11110000,
+  B00011111, B11111000,
+  B00111111, B11111100,
+  B01111111, B11111110,
+  B11111111, B11111111,
+  B00001111, B11110000,
+  B00001111, B11110000,
+  B00001111, B11110000,
+  B00001111, B11110000,
+  B00001111, B11110000,
+};
+
+const byte downArrow[] PROGMEM = {
+  16, 13,
+  B00001111, B11110000,
+  B00001111, B11110000,
+  B00001111, B11110000,
+  B00001111, B11110000,
+  B11111111, B11111111,
+  B01111111, B11111110,
+  B00111111, B11111100,
+  B00011111, B11111000,
+  B00001111, B11110000,
+  B00000111, B11100000,
+  B00000011, B11000000,
+  B00000001, B10000000,
+};
+
+const byte leftArrow[] PROGMEM = {
+  16, 13,
+  B00000000, B10000000,
+  B00000000, B11000000,
+  B00000000, B11100000,
+  B00000000, B11110000,
+  B11111111, B11111000,
+  B11111111, B11111100,
+  B11111111, B11111110,
+  B11111111, B11111110,
+  B00000000, B11111100,
+  B00000000, B11111000,
+  B00000000, B11110000,
+  B00000000, B11100000,
+  B00000000, B10000000,
+};
+
+const byte rightArrow[] PROGMEM = {
+  16, 13,
+  B00000001, B00000000,
+  B00000011, B00000000,
+  B00000111, B00000000,
+  B00001111, B00000000,
+  B00011111, B11111111,
+  B00111111, B11111111,
+  B01111111, B11111111,
+  B01111111, B11111111,
+  B00111111, B00000000,
+  B00011111, B00000000,
+  B00001111, B00000000,
+  B00000111, B00000000,
+  B00000011, B00000000,
+};
+
+const byte* frames[] = {
+  upArrow,
+  downArrow,
+  leftArrow,
+  rightArrow,
+};
+
+#define NUM_FRAMES  (sizeof(frames) / sizeof(frames[0]))
+unsigned int frame = 0;
+#define ADVANCE_MS  (1000 / NUM_FRAMES)
+
+// Global variables
+int system_id = -1;
+String dataBuffer = "";
+
+// Function to handle setting system ID
+void setSystemID(String data) {
+  int startPos = data.indexOf("|S|") + 3;
+  int endPos = data.indexOf('E', startPos);
+  if (startPos >= 0 && endPos > startPos) {
+    system_id = data.substring(startPos, endPos).toInt();
+    EEPROM.write(EEPROM_SYSTEM_ID_ADDR, system_id);  // Write system ID to EEPROM
+    Serial.print("System ID set to: ");
+    Serial.println(system_id);
+  } else {
+    Serial.println("Invalid ID format");
+  }
+}
+
+// Function to handle clearing the screen
+void clearScreen(String data) {
+  int startPos = data.indexOf("|C|") + 3;
+  int endPos = data.indexOf("|6|", startPos);
+  if (startPos >= 0 && endPos > startPos) {
+    int id_to_clear = data.substring(startPos, endPos).toInt();
+    if (id_to_clear == system_id) {
+      Serial.println("Clearing screen...");
+      display.clearScreen(true);  // Clear screen
+    } else {
+      Serial.println("ID mismatch, not clearing screen");
+    }
+  } else {
+    Serial.println("Invalid clear screen format");
+  }
+}
+
+// Function to handle shifting characters
+void shiftCharacter(String data) {
+  int startPos = data.indexOf("|F|") + 3;
+  int endPos = data.indexOf('E', startPos);
+  if (startPos >= 0 && endPos > startPos) {
+    int position = data.substring(startPos, endPos).toInt();
+    Serial.print("Shifting character to position: ");
+    Serial.println(position);
+    // Implement actual character shifting logic here
+  } else {
+    Serial.println("Invalid shift character format");
+  }
+}
+
+// Function to extract data
+void extractData(String data) {
+  // Extracting data without mapping
+  int startPos = data.indexOf('|') + 1;
+  int endPos = data.indexOf('|', startPos);
+  String start_byte = data.substring(startPos, endPos);
+
+  startPos = endPos + 1;
+  endPos = data.indexOf('|', startPos);
+  int ID = data.substring(startPos, endPos).toInt();
+
+  startPos = endPos + 1;
+  endPos = data.indexOf('|', startPos);
+  int data_type_code = data.substring(startPos, endPos).toInt();
+  String data_type = (data_type_code == 4) ? "temporary" : "permanent";
+
+  startPos = endPos + 1;
+  endPos = data.indexOf('|', startPos);
+  int fakedata = data.substring(startPos, endPos).toInt();
+
+  startPos = endPos + 1;
+  endPos = data.indexOf('-', startPos);
+  int x_axis = data.substring(startPos, endPos).toInt();
+
+  startPos = endPos + 1;
+  endPos = data.indexOf('-', startPos);
+  int y_axis = data.substring(startPos, endPos).toInt();
+
+  startPos = endPos + 2; // Skip past '-' and '#'
+  endPos = data.indexOf('#', startPos);
+  String arrow = data.substring(startPos, endPos);
+
+  startPos = endPos + 1;
+  endPos = data.indexOf('|', startPos);
+  String colorWithData = data.substring(startPos, endPos);
+  String actualColor = colorWithData.substring(0, 1);
+  String display_data = colorWithData.substring(1);
+
+  // Print the extracted data
+  Serial.println("Extracted Data:");
+  Serial.println("Start Byte: " + start_byte);
+  Serial.println("ID: " + String(ID));
+  Serial.println("Data Type: " + data_type);
+  Serial.println("X Axis: " + String(x_axis));
+  Serial.println("Y Axis: " + String(y_axis));
+  Serial.println("Arrow: " + arrow);
+  Serial.println("Color: " + actualColor);
+  Serial.println("Display Data: " + display_data);
+
+  // Check if the ID matches the system ID
+  if (ID == system_id) {
+    // Display the arrow at (0, 0)
+    display_arrow(arrow, 0, 0);
+
+    // Display the data at specified coordinates
+    display_data_at(x_axis, y_axis, display_data, actualColor);
+  } else {
+    Serial.println("ID mismatch, not displaying data");
+  }
+}
+
+// Function to handle custom protocol
+void customProtocol(String data) {
+  Serial.println("Processing custom protocol...");
+  extractData(data);
+}
+
+// Function to display arrows
+void display_arrow(String direction, int x, int y) {
+  if (direction == "u") {
+    display.drawBitmap(x, y, upArrow + 2, 16, 13, GRAPHICS_NORMAL);
+  } else if (direction == "d") {
+    display.drawBitmap(x, y, downArrow + 2, 16, 13, GRAPHICS_NORMAL);
+  } else if (direction == "l") {
+    display.drawBitmap(x, y, leftArrow + 2, 16, 13, GRAPHICS_NORMAL);
+  } else if (direction == "r") {
+    display.drawBitmap(x, y, rightArrow + 2, 16, 13, GRAPHICS_NORMAL);
+  } else {
+    Serial.println("Unknown arrow direction");
+  }
+}
+
+// Function to display data at specified coordinates
+void display_data_at(int x, int y, String data, String color) {
+  // Display string data
+  display.drawText(x, y, data.c_str(), GRAPHICS_NORMAL);
+  // Additional logic to set color if required
+}
+
+// Function to process incoming data
+void processData(String data) {
+  if (data.startsWith("|S|")) {
+    setSystemID(data);
+  } else if (data.startsWith("|C|")) {
+    if (data.indexOf("|C|1|4|") >= 0) {
+      customProtocol(data);
+    } else if (data.indexOf("|C|1|6|") >= 0) {
+      clearScreen(data);
+    } else {
+      Serial.println("Unknown command");
+    }
+  } else if (data.startsWith("|F|")) {
+    shiftCharacter(data);
+  } else {
+    Serial.println("Unknown command");
+  }
+}
+
+// Function to display initial message
+void displayInitialMessage() {
+  display.drawText(0, 0, "sid", GRAPHICS_NORMAL);
+  delay(2000); // Display message for 2 seconds
+  display.clearScreen(true); // Clear screen after displaying message
+}
+
+// Setup function
+void setup() {
+  Serial.begin(115200);
+  Serial.println("Start...");
+  Soft_Serial.begin(9600);
+  Timer1.initialize(2000);
+  Timer1.attachInterrupt(scan);
+  Timer1.pwm(9, 255);
+
+  display.setBrightness(255);  // Set brightness to max
+  display.setFont(TimesNewRoman12);  // Set font
+  display.clearScreen(true);  // Clear screen at startup
+
+  // Retrieve system ID from EEPROM
+  system_id = EEPROM.read(EEPROM_SYSTEM_ID_ADDR);
+  Serial.print("System ID from EEPROM: ");
+  Serial.println(system_id);
+
+  // Display initial message
+  displayInitialMessage();
+}
+
+// Main loop
+void loop() {
+  if (Serial.available() > 0) {
+    char incomingChar = Serial.read();
+    if (incomingChar == '\n' || incomingChar == '\r') {
+      if (dataBuffer.length() > 0) {
+        Serial.print("Received data: ");
+        Serial.println(dataBuffer);
+        processData(dataBuffer);
+        dataBuffer = "";
+      }
+    } else {
+      dataBuffer += incomingChar;
+    }
+  }
+}
+
