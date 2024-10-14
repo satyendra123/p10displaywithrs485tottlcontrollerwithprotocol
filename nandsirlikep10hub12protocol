@@ -149,64 +149,145 @@ void shiftCharacter(String data) {
 
 // Function to extract data
 void extractData(String data) {
-  // Extracting data without mapping
-  int startPos = data.indexOf('|') + 1;
-  int endPos = data.indexOf('|', startPos);
-  String start_byte = data.substring(startPos, endPos);
+    bool isTemporary = true;  // Assume it's temporary unless proven otherwise
+    int startPos = data.indexOf('|') + 1;
+    int endPos = data.indexOf('|', startPos);
+    String start_byte = data.substring(startPos, endPos);
 
-  startPos = endPos + 1;
-  endPos = data.indexOf('|', startPos);
-  int ID = data.substring(startPos, endPos).toInt();
+    startPos = endPos + 1;
+    endPos = data.indexOf('|', startPos);
+    int ID = data.substring(startPos, endPos).toInt();
 
-  startPos = endPos + 1;
-  endPos = data.indexOf('|', startPos);
-  int data_type_code = data.substring(startPos, endPos).toInt();
-  String data_type = (data_type_code == 4) ? "temporary" : "permanent";
+    startPos = endPos + 1;
+    endPos = data.indexOf('|', startPos);
+    int data_type_code = data.substring(startPos, endPos).toInt();
+    
+    // Adjust temporary or permanent based on data type code
+    isTemporary = (data_type_code == 4);
+    String data_type = (isTemporary) ? "temporary" : "permanent";
 
-  startPos = endPos + 1;
-  endPos = data.indexOf('|', startPos);
-  int fakedata = data.substring(startPos, endPos).toInt();
+    startPos = endPos + 1;
+    endPos = data.indexOf('|', startPos);
+    int fakedata = data.substring(startPos, endPos).toInt();
 
-  startPos = endPos + 1;
-  endPos = data.indexOf('-', startPos);
-  int x_axis = data.substring(startPos, endPos).toInt();
+    startPos = endPos + 1;
+    endPos = data.indexOf('-', startPos);
+    int x_axis = data.substring(startPos, endPos).toInt();
 
-  startPos = endPos + 1;
-  endPos = data.indexOf('-', startPos);
-  int y_axis = data.substring(startPos, endPos).toInt();
+    startPos = endPos + 1;
+    endPos = data.indexOf('-', startPos);
+    int y_axis = data.substring(startPos, endPos).toInt();
 
-  startPos = endPos + 2; // Skip past '-' and '#'
-  endPos = data.indexOf('#', startPos);
-  String arrow = data.substring(startPos, endPos);
+    startPos = endPos + 1;
+    endPos = data.indexOf('#', startPos);
+    if (endPos != -1) {
+        String arrowAndDisplayData = data.substring(endPos + 1);  // Extract everything after '#'
 
-  startPos = endPos + 1;
-  endPos = data.indexOf('|', startPos);
-  String colorWithData = data.substring(startPos, endPos);
-  String actualColor = colorWithData.substring(0, 1);
-  String display_data = colorWithData.substring(1);
+        // Extract the arrow and display data
+        if (arrowAndDisplayData.length() > 1) {
+            String arrow = arrowAndDisplayData.substring(0, 1);  // First character is the arrow
+            String display_data = arrowAndDisplayData.substring(1);  // Remaining part is the display data
 
-  // Print the extracted data
-  Serial.println("Extracted Data:");
-  Serial.println("Start Byte: " + start_byte);
-  Serial.println("ID: " + String(ID));
-  Serial.println("Data Type: " + data_type);
-  Serial.println("X Axis: " + String(x_axis));
-  Serial.println("Y Axis: " + String(y_axis));
-  Serial.println("Arrow: " + arrow);
-  //Serial.println("Color: " + actualColor);
-  Serial.println("Display Data: " + display_data);
+            // Check if the display data has a trailing '|', and remove it
+            if (display_data.endsWith("|")) {
+                display_data = display_data.substring(0, display_data.length() - 1);  // Remove the last character
+            }
 
-  // Check if the ID matches the system ID
-  if (ID == system_id) {
-    // Display the arrow at (0, 0)
-    display_arrow(arrow, 0, 0);
+            // Print extracted data for debugging
+            Serial.println("Extracted Data:");
+            Serial.println("ID: " + String(ID));
+            Serial.println("Data Type: " + data_type);
+            Serial.println("X Axis: " + String(x_axis));
+            Serial.println("Y Axis: " + String(y_axis));
+            Serial.println("Arrow: " + arrow);
+            Serial.println("Display Data: " + display_data);
 
-    // Display the data at specified coordinates
-    display_data_at(x_axis, y_axis, display_data, actualColor);
-  } else {
-    Serial.println("ID mismatch, not displaying data");
-  }
+            // Check if the ID matches the system ID
+            if (ID == system_id) {
+                // Display the arrow and data
+                display_arrow(arrow, 0, 0);
+                display_data_at(x_axis, y_axis, display_data);
+                Serial.println(x_axis);
+                Serial.println(y_axis);
+
+                // Store data in EEPROM if it's permanent
+                if (!isTemporary) {
+                    storeDataInEEPROM(x_axis, y_axis, display_data);
+                }
+            } else {
+                Serial.println("ID mismatch, not displaying data");
+            }
+        } else {
+            Serial.println("Unknown arrow direction");
+        }
+    } else {
+        Serial.println("Invalid data format, no '#' found");
+    }
 }
+
+
+
+// Function to store x, y coordinates and display data in EEPROM
+void storeDataInEEPROM(int x_axis, int y_axis, String display_data) {
+    int addr = 0;  // Starting address in EEPROM
+    
+    // Store X and Y axis values
+    EEPROM.put(addr, x_axis);
+    addr += sizeof(x_axis);
+    EEPROM.put(addr, y_axis);
+    addr += sizeof(y_axis);
+
+    // Store the display data as a string (up to 50 characters for example)
+    int len = display_data.length();
+    if (len > 50) len = 50; // Limit to 50 characters
+    EEPROM.put(addr, len);
+    addr += sizeof(len);
+
+    for (int i = 0; i < len; i++) {
+        EEPROM.write(addr + i, display_data[i]);  // Writing string one byte at a time
+    }
+    addr += len; // Move the address forward by the length of the display data
+
+    // Clear remaining EEPROM bytes if any (optional)
+    for (int i = addr; i < EEPROM.length(); i++) {
+        EEPROM.write(i, 0);
+    }
+
+    Serial.println("Data stored in EEPROM");
+}
+
+// Function to retrieve and display stored data from EEPROM after power cycle
+void displayStoredData() {
+    int addr = 0;  // Starting address in EEPROM
+    int x = 0, y = 0;
+
+    EEPROM.get(addr, x); // Use get instead of read for better type safety
+    addr += sizeof(x);
+    EEPROM.get(addr, y); // Get Y value
+    addr += sizeof(y);
+
+    // Read the length of stored data
+    int length = 0;
+    EEPROM.get(addr, length); // Use get for the length
+    addr += sizeof(length);
+
+    String stored_data = "";
+    for (int i = 0; i < length; i++) {
+        stored_data += char(EEPROM.read(addr + i));  // Reading string one byte at a time
+    }
+
+    if (stored_data.length() > 0) {
+        Serial.println("Displaying stored data from EEPROM:");
+        Serial.println("X Axis: " + String(x));
+        Serial.println("Y Axis: " + String(y));
+        Serial.println("Stored Data: " + stored_data);
+
+        display_data_at(x, y, stored_data);
+    } else {
+        Serial.println("No data stored in EEPROM.");
+    }
+}
+
 
 // Function to handle custom protocol
 void customProtocol(String data) {
@@ -230,7 +311,7 @@ void display_arrow(String direction, int x, int y) {
 }
 
 // Function to display data at specified coordinates
-void display_data_at(int x, int y, String data, String color) {
+void display_data_at(int x, int y, String data) {
   // Display string data
   display.drawText(x, y, data.c_str());
   // Additional logic to set color if required
@@ -238,35 +319,37 @@ void display_data_at(int x, int y, String data, String color) {
 
 // Function to process incoming data
 void processData(String data) {
-  if (data.startsWith("|S|")) {
-    setSystemID(data);
-  } 
-  else if (data.startsWith("|C|")) {
-    int incomingID = data.substring(3, data.indexOf("|", 3)).toInt();
-    
-    // Compare the incoming ID with the system's ID
-    if (incomingID == system_id) {
-      if (data.indexOf("|C|" + String(system_id) + "|4|") >= 0) {
-        customProtocol(data);
-      } 
-      
-       else if (data.indexOf("|C|" + String(system_id) + "|8|") >= 0) {
-        Serial.println("Text is stored in the EEPROM Memory");
-      }
-
-      else if (data.indexOf("|C|" + String(system_id) + "|6|") >= 0) {
-        clearScreen(data);
-      } else {
+    if (data.startsWith("|S|")) {
+        setSystemID(data);
+    } 
+    else if (data.startsWith("|C|")) {
+        int incomingID = data.substring(3, data.indexOf("|", 3)).toInt();
+        
+        // Compare the incoming ID with the system's ID
+        if (incomingID == system_id) {
+            if (data.indexOf("|C|" + String(system_id) + "|4|") >= 0) {
+                customProtocol(data);
+            } 
+            else if (data.indexOf("|C|" + String(system_id) + "|8|") >= 0) {
+                Serial.println("Text is stored in the EEPROM Memory");
+                extractData(data);  // Call extractData for handling |C|...|8|
+            }
+            else if (data.indexOf("|C|" + String(system_id) + "|6|") >= 0) {
+                clearScreen(data);
+            } 
+            else {
+                Serial.println("Unknown command");
+            }
+        } else {
+            Serial.println("ID mismatch. Command not for this system.");
+        }
+    } 
+    else if (data.startsWith("|F|")) {
+        shiftCharacter(data);
+    } 
+    else {
         Serial.println("Unknown command");
-      }
-    } else {
-      Serial.println("ID mismatch. Command not for this system.");
     }
-  } else if (data.startsWith("|F|")) {
-    shiftCharacter(data);
-  } else {
-    Serial.println("Unknown command");
-  }
 }
 
 // Function to display initial message
@@ -298,9 +381,9 @@ void setup() {
   system_id = EEPROM.read(EEPROM_SYSTEM_ID_ADDR);
   Serial.print("System ID from EEPROM: ");
   Serial.println(system_id);
-
+  displayStoredData();
   // Display initial message
-  displayInitialMessage();
+  //displayInitialMessage();
 }
 
 // Main loop
