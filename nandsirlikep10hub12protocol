@@ -193,7 +193,7 @@ void extractData(String data) {
   Serial.println("X Axis: " + String(x_axis));
   Serial.println("Y Axis: " + String(y_axis));
   Serial.println("Arrow: " + arrow);
-  Serial.println("Color: " + actualColor);
+  //Serial.println("Color: " + actualColor);
   Serial.println("Display Data: " + display_data);
 
   // Check if the ID matches the system ID
@@ -240,13 +240,27 @@ void display_data_at(int x, int y, String data, String color) {
 void processData(String data) {
   if (data.startsWith("|S|")) {
     setSystemID(data);
-  } else if (data.startsWith("|C|")) {
-    if (data.indexOf("|C|1|4|") >= 0) {
-      customProtocol(data);
-    } else if (data.indexOf("|C|1|6|") >= 0) {
-      clearScreen(data);
+  } 
+  else if (data.startsWith("|C|")) {
+    int incomingID = data.substring(3, data.indexOf("|", 3)).toInt();
+    
+    // Compare the incoming ID with the system's ID
+    if (incomingID == system_id) {
+      if (data.indexOf("|C|" + String(system_id) + "|4|") >= 0) {
+        customProtocol(data);
+      } 
+      
+       else if (data.indexOf("|C|" + String(system_id) + "|8|") >= 0) {
+        Serial.println("Text is stored in the EEPROM Memory");
+      }
+
+      else if (data.indexOf("|C|" + String(system_id) + "|6|") >= 0) {
+        clearScreen(data);
+      } else {
+        Serial.println("Unknown command");
+      }
     } else {
-      Serial.println("Unknown command");
+      Serial.println("ID mismatch. Command not for this system.");
     }
   } else if (data.startsWith("|F|")) {
     shiftCharacter(data);
