@@ -7,12 +7,17 @@
 #include <EEPROM.h>
 
 // Define the number of displays
-#define DISPLAYS_ACROSS 4
+#define DISPLAYS_ACROSS 1
 #define DISPLAYS_DOWN 1
 DMD3 display(DISPLAYS_ACROSS, DISPLAYS_DOWN);
 
 // EEPROM address to store system ID
 #define EEPROM_SYSTEM_ID_ADDR 0
+
+const byte TX_PIN = 2;
+const byte RX_PIN = 3;
+
+SoftwareSerial Soft_Serial(RX_PIN, TX_PIN);
 
 // Arrow patterns
 const byte upArrow[] PROGMEM = {
@@ -94,7 +99,7 @@ unsigned int frame = 0;
 #define ADVANCE_MS  (1000 / NUM_FRAMES)
 
 // Global variables
-int system_id = -1;
+int system_id = 1;
 String dataBuffer = "";
 
 // Function to handle setting system ID
@@ -119,7 +124,7 @@ void clearScreen(String data) {
     int id_to_clear = data.substring(startPos, endPos).toInt();
     if (id_to_clear == system_id) {
       Serial.println("Clearing screen...");
-      display.clearScreen(true);  // Clear screen
+      display.clear();
     } else {
       Serial.println("ID mismatch, not clearing screen");
     }
@@ -212,13 +217,13 @@ void customProtocol(String data) {
 // Function to display arrows
 void display_arrow(String direction, int x, int y) {
   if (direction == "u") {
-    display.drawBitmap(x, y, upArrow + 2, 16, 13, GRAPHICS_NORMAL);
+    display.drawBitmap(x, y, upArrow);
   } else if (direction == "d") {
-    display.drawBitmap(x, y, downArrow + 2, 16, 13, GRAPHICS_NORMAL);
+    display.drawBitmap(x, y, downArrow);
   } else if (direction == "l") {
-    display.drawBitmap(x, y, leftArrow + 2, 16, 13, GRAPHICS_NORMAL);
+    display.drawBitmap(x, y, leftArrow);
   } else if (direction == "r") {
-    display.drawBitmap(x, y, rightArrow + 2, 16, 13, GRAPHICS_NORMAL);
+    display.drawBitmap(x, y, rightArrow);
   } else {
     Serial.println("Unknown arrow direction");
   }
@@ -227,7 +232,7 @@ void display_arrow(String direction, int x, int y) {
 // Function to display data at specified coordinates
 void display_data_at(int x, int y, String data, String color) {
   // Display string data
-  display.drawText(x, y, data.c_str(), GRAPHICS_NORMAL);
+  display.drawText(x, y, data.c_str());
   // Additional logic to set color if required
 }
 
@@ -252,9 +257,14 @@ void processData(String data) {
 
 // Function to display initial message
 void displayInitialMessage() {
-  display.drawText(0, 0, "sid", GRAPHICS_NORMAL);
+  display.drawText(0, 0, "sid");
   delay(2000); // Display message for 2 seconds
-  display.clearScreen(true); // Clear screen after displaying message
+  display.clear(); // Clear screen after displaying message
+}
+
+void scan()
+{
+    display.refresh();
 }
 
 // Setup function
@@ -266,9 +276,9 @@ void setup() {
   Timer1.attachInterrupt(scan);
   Timer1.pwm(9, 255);
 
-  display.setBrightness(255);  // Set brightness to max
+  //display.setBrightness(255);  // Set brightness to max
   display.setFont(TimesNewRoman12);  // Set font
-  display.clearScreen(true);  // Clear screen at startup
+  display.clear();  // Clear screen at startup
 
   // Retrieve system ID from EEPROM
   system_id = EEPROM.read(EEPROM_SYSTEM_ID_ADDR);
@@ -295,4 +305,3 @@ void loop() {
     }
   }
 }
-
