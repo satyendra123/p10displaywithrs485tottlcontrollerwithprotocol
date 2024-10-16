@@ -4,7 +4,6 @@
 #include <SPI.h>
 #include "fonts/Arial_Black_16_ISO_8859_1.h"
 
-const int MAX_IDS = 5;
 const int MESSAGE_LENGTH = 30; // Adjust based on expected message size
 SoftDMD dmd(1, 1);
 const uint8_t *FONT = Arial_Black_16_ISO_8859_1;
@@ -61,7 +60,7 @@ void handleSaveCommand(const String& command) {
         String idStr = command.substring(startIndex, endIndex);
         int id = idStr.toInt();
 
-        if (id >= 1 && id <= MAX_IDS) {
+        if (id) {
             EEPROM.write(0, id); // Save only the new ID in the first byte
             Serial.print("Saved ID: ");
             Serial.println(id);
