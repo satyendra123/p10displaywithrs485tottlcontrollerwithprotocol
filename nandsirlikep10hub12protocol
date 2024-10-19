@@ -1,13 +1,14 @@
 #Note- in this i have try to make protocol like nand sir to make the p10 display. so that i can use it with any project using rs485 to ttl module with my display.
+
 #include <SoftwareSerial.h>
 #include <SPI.h>
 #include <DMD3.h>
 #include <TimerOne.h>
-#include <font/TimesNewRoman12.h>
+#include <font/Arial_Black_16.h>
 #include <EEPROM.h>
 
 // Define the number of displays
-#define DISPLAYS_ACROSS 1
+#define DISPLAYS_ACROSS 2
 #define DISPLAYS_DOWN 1
 DMD3 display(DISPLAYS_ACROSS, DISPLAYS_DOWN);
 
@@ -147,7 +148,6 @@ void shiftCharacter(String data) {
   }
 }
 
-// Function to extract data
 void extractData(String data) {
     bool isTemporary = true;  // Assume it's temporary unless proven otherwise
     int startPos = data.indexOf('|') + 1;
@@ -183,49 +183,54 @@ void extractData(String data) {
     if (endPos != -1) {
         String arrowAndDisplayData = data.substring(endPos + 1);  // Extract everything after '#'
 
-        // Extract the arrow and display data
-        if (arrowAndDisplayData.length() > 1) {
-            String arrow = arrowAndDisplayData.substring(0, 1);  // First character is the arrow
-            String display_data = arrowAndDisplayData.substring(1);  // Remaining part is the display data
+        // Define the arrow directions (valid characters for an arrow)
+        String validArrows = "udlr"; // u for up, d for down, l for left, r for right
 
-            // Check if the display data has a trailing '|', and remove it
-            if (display_data.endsWith("|")) {
-                display_data = display_data.substring(0, display_data.length() - 1);  // Remove the last character
+        String arrow = "";
+        String display_data = arrowAndDisplayData;
+
+        // Check if the first character is a valid arrow
+        if (validArrows.indexOf(arrowAndDisplayData[0]) != -1) {
+            arrow = arrowAndDisplayData.substring(0, 1);  // First character is the arrow
+            display_data = arrowAndDisplayData.substring(1);  // Remaining part is the display data
+        }
+
+        // Check if the display data has a trailing '|', and remove it
+        if (display_data.endsWith("|")) {
+            display_data = display_data.substring(0, display_data.length() - 1);  // Remove the last character
+        }
+
+        // Print extracted data for debugging
+        Serial.println("Extracted Data:");
+        Serial.println("ID: " + String(ID));
+        Serial.println("Data Type: " + data_type);
+        Serial.println("X Axis: " + String(x_axis));
+        Serial.println("Y Axis: " + String(y_axis));
+        Serial.println("Arrow: " + arrow);
+        Serial.println("Display Data: " + display_data);
+
+        // Check if the ID matches the system ID
+        if (ID == system_id) {
+            // If the arrow is present, display it and offset the display data
+            if (arrow.length() > 0) {
+                display_arrow(arrow, x_axis, y_axis);
+                display_data_at(x_axis + 18, y_axis, display_data);  // Offset display by 3 pixels
+            } else {
+                // If no arrow, display data at the given coordinates
+                display_data_at(x_axis, y_axis, display_data);
             }
 
-            // Print extracted data for debugging
-            Serial.println("Extracted Data:");
-            Serial.println("ID: " + String(ID));
-            Serial.println("Data Type: " + data_type);
-            Serial.println("X Axis: " + String(x_axis));
-            Serial.println("Y Axis: " + String(y_axis));
-            Serial.println("Arrow: " + arrow);
-            Serial.println("Display Data: " + display_data);
-
-            // Check if the ID matches the system ID
-            if (ID == system_id) {
-                // Display the arrow and data
-                display_arrow(arrow, 0, 0);
-                display_data_at(x_axis, y_axis, display_data);
-                Serial.println(x_axis);
-                Serial.println(y_axis);
-
-                // Store data in EEPROM if it's permanent
-                if (!isTemporary) {
-                    storeDataInEEPROM(x_axis, y_axis, display_data);
-                }
-            } else {
-                Serial.println("ID mismatch, not displaying data");
+            // Store data in EEPROM if it's permanent
+            if (!isTemporary) {
+                storeDataInEEPROM(x_axis, y_axis, display_data);
             }
         } else {
-            Serial.println("Unknown arrow direction");
+            Serial.println("ID mismatch, not displaying data");
         }
     } else {
         Serial.println("Invalid data format, no '#' found");
     }
 }
-
-
 
 // Function to store x, y coordinates and display data in EEPROM
 void storeDataInEEPROM(int x_axis, int y_axis, String display_data) {
@@ -374,7 +379,7 @@ void setup() {
   Timer1.pwm(9, 255);
 
   //display.setBrightness(255);  // Set brightness to max
-  display.setFont(TimesNewRoman12);  // Set font
+  display.setFont(Arial_black_16);  // Set font
   display.clear();  // Clear screen at startup
 
   // Retrieve system ID from EEPROM
@@ -402,3 +407,5 @@ void loop() {
     }
   }
 }
+
+
